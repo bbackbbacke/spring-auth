@@ -37,30 +37,6 @@ public class UserController {
         return "redirect:/api/user/login-page";
     }
 
-    @PostMapping("/user/login")
-    public String login(LoginRequestDto requestDto, HttpServletResponse res) {
-        // (로그인 검증, 검증끝나면 jwt쿠키에 넣고 그 쿠키 담으라고)
-        try {
-            userService.login(requestDto, res);
-        } catch (Exception e) {
-            return "redirect:/api/user/login-page?error";
-                    //클라이언트의 요구사항에 의해서 ?error을 뒤에 붙여줌!
-        }
-
-        return "redirect:/";
-    }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
