@@ -1,9 +1,12 @@
 package com.sparta.springauth.service;
 
+import com.sparta.springauth.dto.LoginRequestDto;
 import com.sparta.springauth.dto.SignupRequestDto;
 import com.sparta.springauth.entity.User;
 import com.sparta.springauth.entity.UserRoleEnum;
+import com.sparta.springauth.jwt.JwtUtil;
 import com.sparta.springauth.repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,10 +17,15 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+
+
+    //@RequiredArgsConstructor 달아도 됨! (자동 객체 생성)
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     // ADMIN_TOKEN
@@ -55,5 +63,29 @@ public class UserService {
         // **JPA** db의 한 줄(하나의 row)은 데이터베이스에 해당하는 entity Class에 하나의 객체!
         User user = new User(username, password, email, role);
         userRepository.save(user);
+    }
+
+    public void login(LoginRequestDto requestDto, HttpServletResponse res) {
+        String username = requestDto.getUsername();
+        String password = requestDto.getPassword();
+
+        //사용자 확인 (을 해서 없으면 error처리! <-> 중복확인은 중복되는게 있으면! error처리)
+        User user = userRepository.findByUsername(username).orElseThrow(
+                ()-> new IllegalArgumentException("등록된 사용자가 없습니다.")
+        ); //Optional로 받아야하는데(query가 Optional로 되어있음) 바로 User로 받고 싶을 때, Optional 기능 중 orElseThrow(문제 없으면 user객체 잘 나옴/해당 사용자 존재하지 않으면 Throw 반환)
+
+        //비밀번호 확인
+        //파라미터(입력한 패스워드, 암호화된 패스워드)
+        if(!passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        //(인증이 되었네!) JWT 생성 및 쿠키에 저장 후 Response 객체에 추가
+        String token = jwtUtil.createToken(user.getUsername(), user.getRole());
+        jwtUtil.addJwtToCookie(token, res);
+
+
+
+
     }
 }
